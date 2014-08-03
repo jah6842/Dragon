@@ -6,13 +6,25 @@
 #include <fstream>
 #include <iterator>
 #include <string>
+#include <algorithm>
 #include <GL/glew.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_opengl.h>
-#include "SOIL\SOIL.h"
-#include "FPSCounter.h"
+#include "SOIL/SOIL.h"
+
+float* loadBMP(std::string path, uint32_t width, uint32_t height){
+	float* _image = new float[width * height];
+	std::fill(_image, _image + (width * height), 1.0f);
+	return _image;
+}
+
+const std::string resourceDir = "..\\..\\Resources";
 
 int main(int argc, char* argv[]){
+
+	for (size_t i = 0; i < argc; ++i){
+		std::cout << argv[i] << '\n';
+	}
 
 	// INIT SDL
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -28,17 +40,41 @@ int main(int argc, char* argv[]){
 	glewExperimental = GL_TRUE;
 	glewInit();
 
+	//float vertices[] = {
+	//	-0.5f, 0.5f, 1.0f, 0.0f, 0.0f, // Top-left
+	//	0.5f, 0.5f, 0.0f, 1.0f, 0.0f, // Top-right
+	//	0.5f, -0.5f, 0.0f, 0.0f, 1.0f, // Bottom-right
+	//	-0.5f, -0.5f, 1.0f, 1.0f, 1.0f  // Bottom-left
+	//};
+
 	float vertices[] = {
-		-0.5f, 0.5f, 1.0f, 0.0f, 0.0f, // Top-left
-		0.5f, 0.5f, 0.0f, 1.0f, 0.0f, // Top-right
-		0.5f, -0.5f, 0.0f, 0.0f, 1.0f, // Bottom-right
-		-0.5f, -0.5f, 1.0f, 1.0f, 1.0f  // Bottom-left
+		//  Position      Color             Texcoords
+		-1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // Top-left
+		1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // Top-right
+		1.0f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, // Bottom-right
+		-1.0f, -1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f  // Bottom-left
 	};
 
 	GLuint elements[] = {
 		0, 1, 2,
 		2, 3, 0
 	};
+
+	GLuint tex;
+	glGenTextures(1, &tex);
+	glBindTexture(GL_TEXTURE_2D, tex);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+	int width, height;
+	std::string path = ("C:\\Users\\Scales\\Desktop\\DragonEngine\\Resources\\Images\\girl.bmp");
+	std::cout << path.c_str() << '\n';
+	unsigned char* image = SOIL_load_image(path.c_str(), &width, &height, 0, SOIL_LOAD_RGB);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
+	SOIL_free_image_data(image);
+	//SOIL_save_screenshot(path.c_str(), SOIL_SAVE_TYPE_BMP, 0, 0, 1920, 1080);
 	
 	// BUFFERS
 	GLuint vao;
@@ -57,13 +93,15 @@ int main(int argc, char* argv[]){
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
 
 	// SHADERS
-	std::ifstream inV("../Dragon/Shaders/basicvertex.glsl");
-	std::ifstream inP("../Dragon/Shaders/basicpixel.glsl");
+	std::string shaderPath = ("C:/Users/Scales/Desktop/DragonEngine/Resources/Shaders/basicvertex.glsl");
+	std::ifstream inV(shaderPath.c_str());
+	shaderPath = ("C:/Users/Scales/Desktop/DragonEngine/Resources/Shaders/basicpixel.glsl");
+	std::ifstream inP(shaderPath.c_str());
 	std::string vSrc((std::istreambuf_iterator<char>(inV)), std::istreambuf_iterator<char>());
 	std::string pSrc((std::istreambuf_iterator<char>(inP)), std::istreambuf_iterator<char>());
 
-	GLint vSrcLen = vSrc.length();
-	GLint pSrcLen = pSrc.length();
+	GLint vSrcLen = static_cast<GLint>(vSrc.length());
+	GLint pSrcLen = static_cast<GLint>(pSrc.length());
 	const GLchar* vertexSource = vSrc.c_str();
 	const GLchar* fragmentSource = pSrc.c_str();
 
@@ -85,64 +123,50 @@ int main(int argc, char* argv[]){
 	glLinkProgram(shaderProgram);
 	glUseProgram(shaderProgram);
 
+	GLint strideSize = 7 * sizeof(float);
+
 	GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
 	glEnableVertexAttribArray(posAttrib);
-	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE,
-		5 * sizeof(float), 0);
+	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, strideSize, 0);
+	glEnableVertexAttribArray(posAttrib);
 
 	GLint colAttrib = glGetAttribLocation(shaderProgram, "color");
 	glEnableVertexAttribArray(colAttrib);
-	glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE,
-		5 * sizeof(float), (void*)(2 * sizeof(float)));
-
-	glEnableVertexAttribArray(posAttrib);
+	glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, strideSize, (void*)(2 * sizeof(float)));
 	glEnableVertexAttribArray(colAttrib);
 
+	GLint texAttrib = glGetAttribLocation(shaderProgram, "texcoord");
+	glEnableVertexAttribArray(texAttrib);
+	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, strideSize, (void*)(5 * sizeof(float)));
+	glEnableVertexAttribArray(texAttrib);
+	
 	GLint status;
 	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
 	char buffer[512];
 	glGetShaderInfoLog(vertexShader, 512, NULL, buffer);
-	//printf("%s\n", buffer);
-	//printf("%d\n", status);
+	printf("%s\n", buffer);
+	printf("%d\n", status);
 	// END SHADER
 
-	int numFrames = 0;
-	uint32_t startTime = SDL_GetTicks();
-
-	FPSCounter fps = FPSCounter();
+	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 
 	SDL_Event windowEvent;
-	while (true)
+
+	// Main event loop
+	bool quit = false;
+	while (!quit)
 	{
 		if (SDL_PollEvent(&windowEvent))
 		{
-			if (windowEvent.type == SDL_QUIT) break;
+			if (windowEvent.type == SDL_QUIT) quit = true;
 			if (windowEvent.type == SDL_KEYUP &&
-				windowEvent.key.keysym.sym == SDLK_ESCAPE) break;
+				windowEvent.key.keysym.sym == SDLK_ESCAPE) quit = true;
 		}
-
-		fps.Update();
-
-		std::string fpsText = "OpenGL - " + std::to_string(fps.GetFPS());
-		SDL_SetWindowTitle(window, fpsText.c_str());
-
-		++numFrames;
-		uint32_t elapsedMS = SDL_GetTicks() - startTime; // Time since start of loop
-		if (elapsedMS) { // Skip this the first frame
-			double elapsedSeconds = elapsedMS / 1000.0; // Convert to seconds
-			double fpss = numFrames / elapsedSeconds; // FPS is Frames / Seconds
-			std::string fpsText = "OpenGL - " + std::to_string(fpss);
-			SDL_SetWindowTitle(window, fpsText.c_str());
-		}
-
-		Sleep(1);
 
 		// Clear the screen to black
-		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		// Draw
-		//glDrawArrays(GL_TRIANGLES, 0, 3);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
 		SDL_GL_SwapWindow(window);

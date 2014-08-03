@@ -3,11 +3,10 @@
 #include "FPSCounter.h"
 
 // Constructor
-FPSCounter::FPSCounter(size_t numBufferedFrames){
+FPSCounter::FPSCounter(size_t numBufferedFrames) : _fps(0), _currentBufferPosition(0) {
 	_frameBuffer = new uint64_t[numBufferedFrames];
 	_frameBufferSize = numBufferedFrames;
-	_currentBufferPosition = 0;
-	_fps = 0;
+	_rdtscBegin = __rdtsc();
 }
 
 // Destructor
@@ -19,7 +18,7 @@ FPSCounter::~FPSCounter(){
 FPSCounter::FPSCounter(const FPSCounter& other) : _frameBufferSize(other._frameBufferSize),
 												_currentBufferPosition(other._currentBufferPosition),
 												_frameBuffer(new uint64_t[_frameBufferSize]),
-												_fps(0)
+												_fps(0), _rdtscBegin(other._rdtscBegin)
 {
 	//std::copy(other._frameBuffer, other._frameBuffer + _frameBufferSize, _frameBuffer); // unsafe?
 	memcpy(_frameBuffer, other._frameBuffer, _frameBufferSize * sizeof(uint64_t));
@@ -34,6 +33,7 @@ FPSCounter& FPSCounter::operator=(const FPSCounter& other){
 		_frameBuffer = new uint64_t[_frameBufferSize];
 		_currentBufferPosition = other._currentBufferPosition;
 		_fps = other._fps;
+		_rdtscBegin = other._rdtscBegin;
 		//std::copy(other._frameBuffer, other._frameBuffer + _frameBufferSize, _frameBuffer);
 		memcpy(_frameBuffer, other._frameBuffer, _frameBufferSize * sizeof(uint64_t));
 	}
@@ -47,7 +47,9 @@ FPSCounter::FPSCounter(FPSCounter&& other) : _frameBufferSize(0), _currentBuffer
 	_frameBuffer = other._frameBuffer;
 	_currentBufferPosition = other._currentBufferPosition;
 	_fps = other._fps;
+	_rdtscBegin = other._rdtscBegin;
 
+	other._rdtscBegin = 0;
 	other._fps = 0;
 	other._currentBufferPosition = 0;
 	other._frameBuffer = nullptr;
@@ -63,7 +65,9 @@ FPSCounter& FPSCounter::operator=(FPSCounter&& other){
 		_frameBuffer = other._frameBuffer;
 		_currentBufferPosition = other._currentBufferPosition;
 		_fps = other._fps;
+		_rdtscBegin = other._rdtscBegin;
 
+		other._rdtscBegin = 0;
 		other._fps = 0;
 		other._currentBufferPosition = 0;
 		other._frameBuffer = nullptr;
@@ -87,9 +91,9 @@ void FPSCounter::Update(){
 		_currentBufferPosition = 0;
 	}
 
-	_frameBuffer[_currentBufferPosition] = __rdtsc();
+	_frameBuffer[_currentBufferPosition] = __rdtsc() - _rdtscBegin;
 
-	size_t tempIndex = _currentBufferPosition;
+	size_t tempIndex = _currentBufferPosition - 1;
 	int64_t fps = 0;
 	uint64_t now, previous = 0;
 
@@ -101,11 +105,11 @@ void FPSCounter::Update(){
 
 		if (tempIndex == 0){
 			now = _frameBuffer[tempIndex];
-			previous = _frameBuffer[tempIndex - 1];
+			previous = _frameBuffer[_frameBufferSize - 1];
 		}
 		else{
 			now = _frameBuffer[tempIndex];
-			previous = _frameBuffer[_frameBufferSize - 1];
+			previous = _frameBuffer[tempIndex - 1];
 		}
 
 		fps += now - previous;
@@ -113,7 +117,7 @@ void FPSCounter::Update(){
 
 	fps /= _frameBufferSize;
 	// Divide by processor frequency
-	_fps = static_cast<double>(fps) / 800000000.0;
+	//_fps = static_cast<double>(fps) / 4500000000.0;
 	// Milliseconds to seconds
 	_fps /= 1000.0;
 }

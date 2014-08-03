@@ -6,6 +6,7 @@
 class FPSCounter {
 private:
 	uint64_t* _frameBuffer;
+	uint64_t _rdtscBegin;
 	size_t _frameBufferSize;
 	size_t _currentBufferPosition;
 	double _fps;
