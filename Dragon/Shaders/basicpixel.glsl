@@ -3,12 +3,11 @@
 in vec3 Color;
 in vec2 Texcoord; 
 
-out vec4 outColor;
+layout(binding=0) uniform sampler2D diffuse1;
+layout(binding=1) uniform sampler2D diffuse2;
 
-uniform sampler2D tex; 
+uniform float time;
 
 void main() { 
-	//outColor = vec4(Color, 1.0);
-	outColor = texture(tex, Texcoord) * vec4(Color, 1.0);
-	//outColor = texture(tex, Texcoord);
+	gl_FragColor = mix(texture2D(diffuse1, Texcoord), texture2D(diffuse2, Texcoord), (sin(time) + 1) / 2) * vec4(Color, 1.0f);
 }

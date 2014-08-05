@@ -1,6 +1,7 @@
 
 #define GLEW_STATIC
 
+#include <ctime>
 #include <iostream>
 #include <vector>
 #include <fstream>
@@ -10,13 +11,8 @@
 #include <GL/glew.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_opengl.h>
-#include "SOIL/SOIL.h"
 
-float* loadBMP(std::string path, uint32_t width, uint32_t height){
-	float* _image = new float[width * height];
-	std::fill(_image, _image + (width * height), 1.0f);
-	return _image;
-}
+#include "Texture2D.h"
 
 const std::string resourceDir = "..\\..\\Resources";
 
@@ -33,19 +29,13 @@ int main(int argc, char* argv[]){
 
 	SDL_Init(SDL_INIT_VIDEO);
 	SDL_Window* window = SDL_CreateWindow("OpenGL", 100, 100, 800, 600, SDL_WINDOW_OPENGL );
+	//SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GLContext context = SDL_GL_CreateContext(window);
-	SDL_GL_SetSwapInterval(0);
+	int fdf = SDL_GL_SetSwapInterval(-1);
 
 	// INIT GLEW
 	glewExperimental = GL_TRUE;
 	glewInit();
-
-	//float vertices[] = {
-	//	-0.5f, 0.5f, 1.0f, 0.0f, 0.0f, // Top-left
-	//	0.5f, 0.5f, 0.0f, 1.0f, 0.0f, // Top-right
-	//	0.5f, -0.5f, 0.0f, 0.0f, 1.0f, // Bottom-right
-	//	-0.5f, -0.5f, 1.0f, 1.0f, 1.0f  // Bottom-left
-	//};
 
 	float vertices[] = {
 		//  Position      Color             Texcoords
@@ -60,21 +50,13 @@ int main(int argc, char* argv[]){
 		2, 3, 0
 	};
 
-	GLuint tex;
-	glGenTextures(1, &tex);
-	glBindTexture(GL_TEXTURE_2D, tex);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	Texture2D* girlTex = new Texture2D();
+	girlTex->LoadTexture("C:\\Users\\Scales\\Desktop\\DragonEngine\\Resources\\Images\\girl.bmp");
+	girlTex->BindInSlot(GL_TEXTURE0);
 
-	int width, height;
-	std::string path = ("C:\\Users\\Scales\\Desktop\\DragonEngine\\Resources\\Images\\girl.bmp");
-	std::cout << path.c_str() << '\n';
-	unsigned char* image = SOIL_load_image(path.c_str(), &width, &height, 0, SOIL_LOAD_RGB);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, image);
-	SOIL_free_image_data(image);
-	//SOIL_save_screenshot(path.c_str(), SOIL_SAVE_TYPE_BMP, 0, 0, 1920, 1080);
+	Texture2D* dargTex = new Texture2D();
+	dargTex->LoadTexture("C:\\Users\\Scales\\Desktop\\DragonEngine\\Resources\\Images\\darg.bmp");
+	dargTex->BindInSlot(GL_TEXTURE1);
 	
 	// BUFFERS
 	GLuint vao;
@@ -93,9 +75,9 @@ int main(int argc, char* argv[]){
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
 
 	// SHADERS
-	std::string shaderPath = ("C:/Users/Scales/Desktop/DragonEngine/Resources/Shaders/basicvertex.glsl");
+	std::string shaderPath = ("C:/Users/Scales/Desktop/DragonEngine/Dragon/Shaders/basicvertex.glsl");
 	std::ifstream inV(shaderPath.c_str());
-	shaderPath = ("C:/Users/Scales/Desktop/DragonEngine/Resources/Shaders/basicpixel.glsl");
+	shaderPath = ("C:/Users/Scales/Desktop/DragonEngine/Dragon/Shaders/basicpixel.glsl");
 	std::ifstream inP(shaderPath.c_str());
 	std::string vSrc((std::istreambuf_iterator<char>(inV)), std::istreambuf_iterator<char>());
 	std::string pSrc((std::istreambuf_iterator<char>(inP)), std::istreambuf_iterator<char>());
@@ -117,8 +99,6 @@ int main(int argc, char* argv[]){
 	GLuint shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
 	glAttachShader(shaderProgram, fragmentShader);
-
-	glBindFragDataLocation(shaderProgram, 0, "outColor");
 
 	glLinkProgram(shaderProgram);
 	glUseProgram(shaderProgram);
@@ -163,12 +143,21 @@ int main(int argc, char* argv[]){
 				windowEvent.key.keysym.sym == SDLK_ESCAPE) quit = true;
 		}
 
+		// Reset state
+		glUseProgram(0);
 		// Clear the screen to black
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		// Draw
+		glUseProgram(shaderProgram);
+		girlTex->BindInSlot(GL_TEXTURE0);
+		dargTex->BindInSlot(GL_TEXTURE1);
+
+		float time = (float)clock() / (float)CLOCKS_PER_SEC * 4.0f;
+		glUniform1f(glGetUniformLocation(shaderProgram, "time"), time);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
+		// Swap buffers
 		SDL_GL_SwapWindow(window);
 	}
 
