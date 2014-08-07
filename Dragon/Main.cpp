@@ -19,6 +19,68 @@
 
 const std::string resourceDir = "..\\..\\Resources";
 
+Texture2D* girlTex;
+Texture2D* dargTex;
+GLuint shaderProgram;
+SDL_Window* window;
+
+void Draw(){
+	// Reset state
+	glUseProgram(0);
+	// Clear the screen to black
+	//glClear(GL_COLOR_BUFFER_BIT);
+
+	// Draw
+	glUseProgram(shaderProgram);
+	girlTex->BindInSlot(GL_TEXTURE0);
+	dargTex->BindInSlot(GL_TEXTURE1);
+
+	glm::mat4 model;
+	model = glm::rotate(
+		model,
+		(float)clock() / (float)CLOCKS_PER_SEC * 180.0f,
+		glm::vec3(0.0f, 0.0f, 1.0f)
+		);
+	model = glm::rotate(
+		model,
+		(float)clock() / (float)CLOCKS_PER_SEC * 180.0f,
+		glm::vec3(0.0f, 1.0f, 0.0f)
+		);
+	GLint uniTrans = glGetUniformLocation(shaderProgram, "model");
+	glUniformMatrix4fv(uniTrans, 1, GL_FALSE, glm::value_ptr(model));
+
+	glm::mat4 view = glm::lookAt(
+		glm::vec3(2.0f, 2.0f, 2.0f),
+		glm::vec3(0.0f, 0.0f, 0.0f),
+		glm::vec3(0.0f, 0.0f, 1.0f)
+		);
+	GLint uniView = glGetUniformLocation(shaderProgram, "view");
+	glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
+
+	glm::mat4 proj = glm::perspective(45.0f, 800.0f / 600.0f, 1.0f, 10.0f);
+	GLint uniProj = glGetUniformLocation(shaderProgram, "proj");
+	glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
+
+	float time = (float)clock() / (float)CLOCKS_PER_SEC * 4.0f;
+	glUniform1f(glGetUniformLocation(shaderProgram, "time"), time);
+	glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+	// Swap buffers
+	SDL_GL_SwapWindow(window);
+}
+
+int eventFilter(void* userdata, SDL_Event *e)
+{
+	
+	if (e->window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
+	{
+		glViewport(0, 0, e->window.data1, e->window.data2);
+		SDL_UpdateWindowSurface(window);
+		Draw();
+	}
+	return 1; // return 1 so all events are added to queue
+}
+
 int main(int argc, char* argv[]){
 
 	for (size_t i = 0; i < argc; ++i){
@@ -31,10 +93,14 @@ int main(int argc, char* argv[]){
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 4);
 
 	SDL_Init(SDL_INIT_VIDEO);
-	SDL_Window* window = SDL_CreateWindow("OpenGL", 100, 100, 800, 600, SDL_WINDOW_OPENGL );
+	window = SDL_CreateWindow("OpenGL", 100, 100, 800, 600, SDL_WINDOW_OPENGL);
 	//SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GLContext context = SDL_GL_CreateContext(window);
 	SDL_GL_SetSwapInterval(0);
+
+#ifdef WIN32
+	SDL_SetEventFilter(&eventFilter, NULL);
+#endif
 
 	// INIT GLEW
 	glewExperimental = GL_TRUE;
@@ -53,11 +119,11 @@ int main(int argc, char* argv[]){
 		2, 3, 0
 	};
 
-	Texture2D* girlTex = new Texture2D();
+	girlTex = new Texture2D();
 	girlTex->LoadTexture("C:\\Users\\Scales\\Desktop\\DragonEngine\\Resources\\Images\\girl.bmp");
 	girlTex->BindInSlot(GL_TEXTURE0);
 
-	Texture2D* dargTex = new Texture2D();
+	dargTex = new Texture2D();
 	dargTex->LoadTexture("C:\\Users\\Scales\\Desktop\\DragonEngine\\Resources\\Images\\darg.bmp");
 	dargTex->BindInSlot(GL_TEXTURE1);
 	
@@ -99,7 +165,7 @@ int main(int argc, char* argv[]){
 	glCompileShader(fragmentShader);
 	glCompileShader(vertexShader);
 
-	GLuint shaderProgram = glCreateProgram();
+	shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
 	glAttachShader(shaderProgram, fragmentShader);
 
@@ -139,29 +205,24 @@ int main(int argc, char* argv[]){
 	bool quit = false;
 	while (!quit)
 	{
-		if (SDL_PollEvent(&windowEvent))
+		while (SDL_PollEvent(&windowEvent))
 		{
 			if (windowEvent.type == SDL_QUIT) quit = true;
 			if (windowEvent.type == SDL_KEYUP &&
 				windowEvent.key.keysym.sym == SDLK_ESCAPE) quit = true;
+
+			//if (windowEvent.type == SDL_WINDOWEVENT){
+				//if (windowEvent.window.event == SDL_WINDOWEVENT_RESIZED){
+					//glViewport(0, 0, windowEvent.window.data1, windowEvent.window.data2);
+					//Draw();
+					//glFlush();
+					//continue;
+				//}
+			//}
 		}
 
-		// Reset state
-		glUseProgram(0);
-		// Clear the screen to black
-		//glClear(GL_COLOR_BUFFER_BIT);
+		Draw();
 
-		// Draw
-		glUseProgram(shaderProgram);
-		girlTex->BindInSlot(GL_TEXTURE0);
-		dargTex->BindInSlot(GL_TEXTURE1);
-
-		float time = (float)clock() / (float)CLOCKS_PER_SEC * 4.0f;
-		glUniform1f(glGetUniformLocation(shaderProgram, "time"), time);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-
-		// Swap buffers
-		SDL_GL_SwapWindow(window);
 	}
 
 	glDeleteProgram(shaderProgram);
