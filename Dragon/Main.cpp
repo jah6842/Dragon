@@ -11,6 +11,9 @@
 #include <GL/glew.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_opengl.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "Texture2D.h"
 
@@ -31,7 +34,7 @@ int main(int argc, char* argv[]){
 	SDL_Window* window = SDL_CreateWindow("OpenGL", 100, 100, 800, 600, SDL_WINDOW_OPENGL );
 	//SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GLContext context = SDL_GL_CreateContext(window);
-	int fdf = SDL_GL_SetSwapInterval(-1);
+	SDL_GL_SetSwapInterval(0);
 
 	// INIT GLEW
 	glewExperimental = GL_TRUE;
@@ -146,7 +149,7 @@ int main(int argc, char* argv[]){
 		// Reset state
 		glUseProgram(0);
 		// Clear the screen to black
-		glClear(GL_COLOR_BUFFER_BIT);
+		//glClear(GL_COLOR_BUFFER_BIT);
 
 		// Draw
 		glUseProgram(shaderProgram);
