@@ -17,13 +17,17 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "Texture2D.h"
+#include "GLProgram.h"
 
 const std::string resourceDir = "..\\..\\Resources";
 
 Texture2D* girlTex;
 Texture2D* dargTex;
-GLuint shaderProgram;
-GLFWwindow* window;
+GLProgram* basicProgram;
+GLFWwindow* window; 
+
+int windowWidth, windowHeight;
+float aspectRatio = 16.0f / 9.0f;
 
 void Draw(){
 	// Reset state
@@ -32,7 +36,7 @@ void Draw(){
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Draw
-	glUseProgram(shaderProgram);
+	basicProgram->Use();
 	girlTex->BindInSlot(GL_TEXTURE0);
 	dargTex->BindInSlot(GL_TEXTURE1);
 
@@ -43,7 +47,7 @@ void Draw(){
 		(float)clock() / (float)CLOCKS_PER_SEC * 180.0f,
 		glm::vec3(0.0f, 0.0f, 1.0f)
 		);
-	GLint uniModel = glGetUniformLocation(shaderProgram, "model");
+	GLint uniModel = glGetUniformLocation(basicProgram->GetHandle(), "model");
 	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 
 	glm::mat4 view = glm::lookAt(
@@ -51,15 +55,15 @@ void Draw(){
 		glm::vec3(0.0f, 0.0f, 0.0f),
 		glm::vec3(0.0f, 0.0f, 1.0f)
 		);
-	GLint uniView = glGetUniformLocation(shaderProgram, "view");
+	GLint uniView = glGetUniformLocation(basicProgram->GetHandle(), "view");
 	glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
-	glm::mat4 proj = glm::perspective(75.0f, 800.0f / 600.0f, 1.0f, 10.0f);
-	GLint uniProj = glGetUniformLocation(shaderProgram, "proj");
+	glm::mat4 proj = glm::perspective(75.0f, aspectRatio, 1.0f, 10.0f);
+	GLint uniProj = glGetUniformLocation(basicProgram->GetHandle(), "proj");
 	glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 
 	float time = (float)clock() / (float)CLOCKS_PER_SEC * 4.0f;
-	glUniform1f(glGetUniformLocation(shaderProgram, "time"), time);
+	glUniform1f(glGetUniformLocation(basicProgram->GetHandle(), "time"), time);
 
 	// Draw cube
 	glEnable(GL_DEPTH_TEST);
@@ -84,7 +88,7 @@ void Draw(){
 		model = glm::scale(glm::translate(model, glm::vec3(0, 0, -1)), glm::vec3(1, 1, -1));
 		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 
-		GLint uniColor = glGetUniformLocation(shaderProgram, "overrideColor");
+		GLint uniColor = glGetUniformLocation(basicProgram->GetHandle(), "overrideColor");
 		glUniform3f(uniColor, 0.3f, 0.3f, 0.3f);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 		glUniform3f(uniColor, 1.0f, 1.0f, 1.0f);
@@ -108,6 +112,9 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 
 static void resize_callback(GLFWwindow* window, int width, int height){
 	glViewport(0, 0, width, height);
+	windowWidth = width;
+	windowHeight = height;
+	aspectRatio = static_cast<float>(windowWidth) / static_cast<float>(windowHeight);
 }
 
 int main(int argc, char* argv[]){
@@ -123,7 +130,7 @@ int main(int argc, char* argv[]){
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_REFRESH_RATE, 0);
-	window = glfwCreateWindow(1920, 1080, "OpenGL", glfwGetPrimaryMonitor(), NULL);
+	window = glfwCreateWindow(800, 600, "OpenGL", NULL, NULL);
 	if (!window){
 		glfwTerminate();
 		return -1;
@@ -217,59 +224,28 @@ int main(int argc, char* argv[]){
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
 
-	// SHADERS
-	std::string shaderPath = ("C:/Users/Scales/Desktop/DragonEngine/Dragon/Shaders/basicvertex.glsl");
-	std::ifstream inV(shaderPath.c_str());
-	shaderPath = ("C:/Users/Scales/Desktop/DragonEngine/Dragon/Shaders/basicpixel.glsl");
-	std::ifstream inP(shaderPath.c_str());
-	std::string vSrc((std::istreambuf_iterator<char>(inV)), std::istreambuf_iterator<char>());
-	std::string pSrc((std::istreambuf_iterator<char>(inP)), std::istreambuf_iterator<char>());
-
-	GLint vSrcLen = static_cast<GLint>(vSrc.length());
-	GLint pSrcLen = static_cast<GLint>(pSrc.length());
-	const GLchar* vertexSource = vSrc.c_str();
-	const GLchar* fragmentSource = pSrc.c_str();
-
-	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-
-	glShaderSource(vertexShader, 1, &vertexSource, &vSrcLen);
-	glShaderSource(fragmentShader, 1, &fragmentSource, &pSrcLen);
-
-	glCompileShader(fragmentShader);
-	glCompileShader(vertexShader);
-
-	shaderProgram = glCreateProgram();
-	glAttachShader(shaderProgram, vertexShader);
-	glAttachShader(shaderProgram, fragmentShader);
-
-	glLinkProgram(shaderProgram);
-	glUseProgram(shaderProgram);
+	basicProgram = new GLProgram();
+	basicProgram->LoadVertexShader("C:/Users/Scales/Desktop/DragonEngine/Dragon/Shaders/basicvertex.glsl");
+	basicProgram->LoadFragmentShader("C:/Users/Scales/Desktop/DragonEngine/Dragon/Shaders/basicpixel.glsl");
+	basicProgram->Link();
+	basicProgram->Use();
 
 	GLint strideSize = 8 * sizeof(float);
 
-	GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
+	GLint posAttrib = glGetAttribLocation(basicProgram->GetHandle(), "position");
 	glEnableVertexAttribArray(posAttrib);
 	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, strideSize, 0);
 	glEnableVertexAttribArray(posAttrib);
 
-	GLint colAttrib = glGetAttribLocation(shaderProgram, "color");
+	GLint colAttrib = glGetAttribLocation(basicProgram->GetHandle(), "color");
 	glEnableVertexAttribArray(colAttrib);
 	glVertexAttribPointer(colAttrib, 3, GL_FLOAT, GL_FALSE, strideSize, (void*)(3 * sizeof(float)));
 	glEnableVertexAttribArray(colAttrib);
 
-	GLint texAttrib = glGetAttribLocation(shaderProgram, "texcoord");
+	GLint texAttrib = glGetAttribLocation(basicProgram->GetHandle(), "texcoord");
 	glEnableVertexAttribArray(texAttrib);
 	glVertexAttribPointer(texAttrib, 2, GL_FLOAT, GL_FALSE, strideSize, (void*)(6 * sizeof(float)));
 	glEnableVertexAttribArray(texAttrib);
-	
-	GLint status;
-	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
-	char buffer[512];
-	glGetShaderInfoLog(vertexShader, 512, NULL, buffer);
-	printf("%s\n", buffer);
-	printf("%d\n", status);
-	// END SHADER
 
 	glfwSetErrorCallback(error_callback);
 	glfwSetKeyCallback(window, key_callback);
@@ -285,29 +261,11 @@ int main(int argc, char* argv[]){
 
 		glfwSetWindowTitle(window, std::to_string(count).c_str());
 
-
-
-		/*while (SDL_PollEvent(&windowEvent))
-		{
-			if (windowEvent.type == SDL_QUIT) quit = true;
-			if (windowEvent.type == SDL_KEYUP &&
-				windowEvent.key.keysym.sym == SDLK_ESCAPE) quit = true;
-		}*/
-
 		Draw();
-
 	}
 
-	glDeleteProgram(shaderProgram);
-	glDeleteShader(fragmentShader);
-	glDeleteShader(vertexShader);
-
 	glDeleteBuffers(1, &vbo);
-
 	glDeleteVertexArrays(1, &vao);
-
-	//SDL_GL_DeleteContext(context);
-	//SDL_Quit();
 
 	glfwTerminate();
 
