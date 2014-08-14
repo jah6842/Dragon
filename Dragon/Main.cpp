@@ -1,9 +1,11 @@
 
 #define GLEW_STATIC
+//#define GLM_FORCE_RADIANS
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#include <Windows.h>
 #include <ctime>
 #include <iostream>
 #include <vector>
@@ -16,6 +18,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Camera.h"
 #include "Texture2D.h"
 #include "GLProgram.h"
 
@@ -25,9 +28,11 @@ Texture2D* girlTex;
 Texture2D* dargTex;
 GLProgram* basicProgram;
 GLFWwindow* window; 
+Camera* camera;
 
-int windowWidth, windowHeight;
-float aspectRatio = 16.0f / 9.0f;
+int windowWidth = 800;
+int windowHeight = 600;
+float aspectRatio = static_cast<float>(windowWidth) / static_cast<float>(windowHeight);
 
 void Draw(){
 	// Reset state
@@ -40,25 +45,16 @@ void Draw(){
 	girlTex->BindInSlot(GL_TEXTURE0);
 	dargTex->BindInSlot(GL_TEXTURE1);
 
-	glm::mat4 model;
+	glm::mat4 model = glm::mat4(1.0f);
 
-	model = glm::rotate(
-		model,
-		(float)clock() / (float)CLOCKS_PER_SEC * 180.0f,
-		glm::vec3(0.0f, 0.0f, 1.0f)
-		);
 	GLint uniModel = glGetUniformLocation(basicProgram->GetHandle(), "model");
 	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
 
-	glm::mat4 view = glm::lookAt(
-		glm::vec3(2.0f, 3.0f, 2.0f),
-		glm::vec3(0.0f, 0.0f, 0.0f),
-		glm::vec3(0.0f, 0.0f, 1.0f)
-		);
+	glm::mat4 view = camera->GetViewMatrix();
 	GLint uniView = glGetUniformLocation(basicProgram->GetHandle(), "view");
 	glUniformMatrix4fv(uniView, 1, GL_FALSE, glm::value_ptr(view));
 
-	glm::mat4 proj = glm::perspective(75.0f, aspectRatio, 1.0f, 10.0f);
+	glm::mat4 proj = camera->GetProjectionMatrix();
 	GLint uniProj = glGetUniformLocation(basicProgram->GetHandle(), "proj");
 	glUniformMatrix4fv(uniProj, 1, GL_FALSE, glm::value_ptr(proj));
 
@@ -68,32 +64,6 @@ void Draw(){
 	// Draw cube
 	glEnable(GL_DEPTH_TEST);
 	glDrawArrays(GL_TRIANGLES, 0, 36);
-
-	glEnable(GL_STENCIL_TEST);
-
-		// Draw floor
-		glStencilFunc(GL_ALWAYS, 1, 0xFF);
-		glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-		glStencilMask(0xFF);
-		glDepthMask(GL_FALSE);
-		glClear(GL_STENCIL_BUFFER_BIT);
-
-		glDrawArrays(GL_TRIANGLES, 36, 6);
-
-		// Draw cube reflection
-		glStencilFunc(GL_EQUAL, 1, 0xFF);
-		glStencilMask(0x00);
-		glDepthMask(GL_TRUE);
-
-		model = glm::scale(glm::translate(model, glm::vec3(0, 0, -1)), glm::vec3(1, 1, -1));
-		glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
-
-		GLint uniColor = glGetUniformLocation(basicProgram->GetHandle(), "overrideColor");
-		glUniform3f(uniColor, 0.3f, 0.3f, 0.3f);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		glUniform3f(uniColor, 1.0f, 1.0f, 1.0f);
-
-	glDisable(GL_STENCIL_TEST);
 
 	// Swap buffers
 	glfwSwapBuffers(window);
@@ -108,6 +78,15 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, GL_TRUE);
+
+	if (key == GLFW_KEY_S && action == GLFW_PRESS)
+		camera->transform->Move(-1.0f, 0, 0);
+	if (key == GLFW_KEY_W && action == GLFW_PRESS)
+		camera->transform->Move(1.0f, 0, 0);
+	if (key == GLFW_KEY_A && action == GLFW_PRESS)
+		camera->transform->Move(0.0f, 0, -1);
+	if (key == GLFW_KEY_D && action == GLFW_PRESS)
+		camera->transform->Move(0.0f, 0, 1);
 }
 
 static void resize_callback(GLFWwindow* window, int width, int height){
@@ -115,6 +94,17 @@ static void resize_callback(GLFWwindow* window, int width, int height){
 	windowWidth = width;
 	windowHeight = height;
 	aspectRatio = static_cast<float>(windowWidth) / static_cast<float>(windowHeight);
+}
+
+double getHighResTimestamp(){
+	LARGE_INTEGER nowTime, Frequency;
+	QueryPerformanceFrequency(&Frequency);
+	QueryPerformanceCounter(&nowTime);
+
+	//double secondsElapsed = static_cast<double>(ElapsedMicroseconds.QuadPart) / 1000000.0L;
+	double secondsElapsed = static_cast<double>(nowTime.QuadPart) / static_cast<double>(Frequency.QuadPart);
+
+	return secondsElapsed;
 }
 
 int main(int argc, char* argv[]){
@@ -251,17 +241,48 @@ int main(int argc, char* argv[]){
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetWindowSizeCallback(window, resize_callback);
 
+	camera = new Camera(windowWidth, windowHeight);
+
 	// Main event loop
 	bool quit = false;
-	int count = 0;
+
+	double t = 0.0;
+	const double dt = 0.01;
+
+	double currentTime = getHighResTimestamp();
+	double accumulator = 0.0;
+
+	//State previous;
+	//State current;
+
 	while (!glfwWindowShouldClose(window))
 	{
-		count++;
 		glfwPollEvents();
 
-		glfwSetWindowTitle(window, std::to_string(count).c_str());
+		double newTime = getHighResTimestamp();
+		double frameTime = newTime - currentTime;
+		if (frameTime > 0.25)
+			frameTime = 0.25;
+		currentTime = newTime;
+		glfwSetWindowTitle(window, std::to_string(currentTime).c_str());
 
-		Draw();
+		accumulator += frameTime;
+
+		while (accumulator >= dt)
+		{
+			//previousState = currentState;
+			//integrate(currentState, t, dt);
+			t += dt;
+			accumulator -= dt;
+		}
+
+		const double alpha = accumulator / dt;
+
+		//State state = (currentState * alpha) + (previousState * (1.0 - alpha));
+
+		camera->Update();
+
+		Draw(/*state*/);
 	}
 
 	glDeleteBuffers(1, &vbo);

@@ -2,7 +2,7 @@
 #define __GLPROGRAM_H
 
 #include <string>
-#include <GL\glew.h>
+#include <GL/glew.h>
 
 class GLProgram {
 public:
