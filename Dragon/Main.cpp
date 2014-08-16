@@ -5,7 +5,6 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-#include <Windows.h>
 #include <ctime>
 #include <iostream>
 #include <vector>
@@ -18,6 +17,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
+#include "Utilities.h"
 #include "Camera.h"
 #include "Texture2D.h"
 #include "GLProgram.h"
@@ -34,7 +34,7 @@ int windowWidth = 800;
 int windowHeight = 600;
 float aspectRatio = static_cast<float>(windowWidth) / static_cast<float>(windowHeight);
 
-void Draw(){
+void Draw(float dt){
 	// Reset state
 	glUseProgram(0);
 	// Clear the screen to black
@@ -45,10 +45,13 @@ void Draw(){
 	girlTex->BindInSlot(GL_TEXTURE0);
 	dargTex->BindInSlot(GL_TEXTURE1);
 
-	glm::mat4 model = glm::mat4(1.0f);
+	glm::mat4 defaultModel = glm::mat4(1.0f);
+	defaultModel = glm::rotate(defaultModel,
+		270.0f,
+		glm::vec3(1.0f, 0.0f, 0.0f));
 
 	GLint uniModel = glGetUniformLocation(basicProgram->GetHandle(), "model");
-	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
+	glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(defaultModel));
 
 	glm::mat4 view = camera->GetViewMatrix();
 	GLint uniView = glGetUniformLocation(basicProgram->GetHandle(), "view");
@@ -61,9 +64,19 @@ void Draw(){
 	float time = (float)clock() / (float)CLOCKS_PER_SEC * 4.0f;
 	glUniform1f(glGetUniformLocation(basicProgram->GetHandle(), "time"), time);
 
-	// Draw cube
-	glEnable(GL_DEPTH_TEST);
-	glDrawArrays(GL_TRIANGLES, 0, 36);
+	for (size_t i = 0; i < 20; i++){
+		for (size_t j = 0; j < 20; j++){
+			for (size_t k = 0; k < 20; k++){
+				glm::mat4 model = defaultModel;
+				model = glm::translate(model, glm::vec3(i * 2, j * 2, k * 2));
+				glUniformMatrix4fv(uniModel, 1, GL_FALSE, glm::value_ptr(model));
+
+				// Draw cube
+				glEnable(GL_DEPTH_TEST);
+				glDrawArrays(GL_TRIANGLES, 0, 36);
+			}
+		}
+	}
 
 	// Swap buffers
 	glfwSwapBuffers(window);
@@ -96,16 +109,6 @@ static void resize_callback(GLFWwindow* window, int width, int height){
 	aspectRatio = static_cast<float>(windowWidth) / static_cast<float>(windowHeight);
 }
 
-double getHighResTimestamp(){
-	LARGE_INTEGER nowTime, Frequency;
-	QueryPerformanceFrequency(&Frequency);
-	QueryPerformanceCounter(&nowTime);
-
-	//double secondsElapsed = static_cast<double>(ElapsedMicroseconds.QuadPart) / 1000000.0L;
-	double secondsElapsed = static_cast<double>(nowTime.QuadPart) / static_cast<double>(Frequency.QuadPart);
-
-	return secondsElapsed;
-}
 
 int main(int argc, char* argv[]){
 
@@ -249,7 +252,7 @@ int main(int argc, char* argv[]){
 	double t = 0.0;
 	const double dt = 0.01;
 
-	double currentTime = getHighResTimestamp();
+	double currentTime = dgnGetHighResTimestamp();
 	double accumulator = 0.0;
 
 	//State previous;
@@ -259,7 +262,7 @@ int main(int argc, char* argv[]){
 	{
 		glfwPollEvents();
 
-		double newTime = getHighResTimestamp();
+		double newTime = dgnGetHighResTimestamp();
 		double frameTime = newTime - currentTime;
 		if (frameTime > 0.25)
 			frameTime = 0.25;
@@ -282,7 +285,7 @@ int main(int argc, char* argv[]){
 
 		camera->Update();
 
-		Draw(/*state*/);
+		Draw(/*state*/dt);
 	}
 
 	glDeleteBuffers(1, &vbo);

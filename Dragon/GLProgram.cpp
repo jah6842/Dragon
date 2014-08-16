@@ -1,5 +1,6 @@
 #include "GLProgram.h"
 #include "Utilities.h"
+#include <string>
 
 GLProgram::GLProgram() : vShaderHandle(0), fShaderHandle(0) {
 
@@ -13,7 +14,7 @@ GLProgram::~GLProgram(){
 void GLProgram::LoadVertexShader(const char* path){
 	// Load shader from file
 	std::string data;
-	LoadTextFromFile(path, data);
+	dgnLoadTextFromFile(path, data);
 	const GLchar* shaderSrc = data.c_str();
 	GLint shaderSrcLen = data.length();
 
@@ -31,7 +32,7 @@ void GLProgram::LoadVertexShader(const char* path){
 void GLProgram::LoadFragmentShader(const char* path){
 	// Load shader from file
 	std::string data;
-	LoadTextFromFile(path, data);
+	dgnLoadTextFromFile(path, data);
 	const GLchar* shaderSrc = data.c_str();
 	GLint shaderSrcLen = data.length();
 

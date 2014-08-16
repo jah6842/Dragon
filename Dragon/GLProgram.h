@@ -1,7 +1,6 @@
 #ifndef __GLPROGRAM_H
 #define __GLPROGRAM_H
 
-#include <string>
 #include <GL/glew.h>
 
 class GLProgram {
