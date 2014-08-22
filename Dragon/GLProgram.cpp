@@ -2,19 +2,24 @@
 #include "Utilities.h"
 #include <string>
 
+const char* GLProgram::basePath = "C:/Users/Scales/Desktop/DragonEngine/Dragon/Shaders/";
+
 GLProgram::GLProgram() : vShaderHandle(0), fShaderHandle(0) {
 
 }
+
 GLProgram::~GLProgram(){
 	glDeleteProgram(programHandle);
 	glDeleteShader(vShaderHandle);
 	glDeleteShader(fShaderHandle);
 }
 
-void GLProgram::LoadVertexShader(const char* path){
+void GLProgram::LoadVertexShader(const char* name){
 	// Load shader from file
 	std::string data;
-	dgnLoadTextFromFile(path, data);
+	std::string fullPath = basePath; fullPath += name;
+
+	dgnLoadTextFromFile(fullPath.c_str(), data);
 	const GLchar* shaderSrc = data.c_str();
 	GLint shaderSrcLen = data.length();
 
@@ -29,10 +34,12 @@ void GLProgram::LoadVertexShader(const char* path){
 
 }
 
-void GLProgram::LoadFragmentShader(const char* path){
+void GLProgram::LoadFragmentShader(const char* name){
 	// Load shader from file
 	std::string data;
-	dgnLoadTextFromFile(path, data);
+	std::string fullPath = basePath; fullPath += name;
+
+	dgnLoadTextFromFile(fullPath.c_str(), data);
 	const GLchar* shaderSrc = data.c_str();
 	GLint shaderSrcLen = data.length();
 

@@ -61,7 +61,9 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Shaders\basicpixel.glsl" />
-    <None Include="Shaders\basicvertex.glsl" />
+    <None Include="Shaders\textured_p.glsl" />
+    <None Include="Shaders\textured_v.glsl" />
+    <None Include="Shaders\basic_v.glsl" />
+    <None Include="Shaders\basic_p.glsl" />
   </ItemGroup>
 </Project>

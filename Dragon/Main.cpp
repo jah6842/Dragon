@@ -1,6 +1,6 @@
 
 #define GLEW_STATIC
-//#define GLM_FORCE_RADIANS
+#define GLM_FORCE_RADIANS
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -34,6 +34,8 @@ int windowWidth = 800;
 int windowHeight = 600;
 float aspectRatio = static_cast<float>(windowWidth) / static_cast<float>(windowHeight);
 
+float accumulated = 0.0f;
+
 void Draw(float dt){
 	// Reset state
 	glUseProgram(0);
@@ -42,12 +44,14 @@ void Draw(float dt){
 
 	// Draw
 	basicProgram->Use();
-	girlTex->BindInSlot(GL_TEXTURE0);
-	dargTex->BindInSlot(GL_TEXTURE1);
+	//girlTex->BindInSlot(GL_TEXTURE0);
+	dargTex->BindInSlot(GL_TEXTURE0);
+
+	accumulated += dt;
 
 	glm::mat4 defaultModel = glm::mat4(1.0f);
 	defaultModel = glm::rotate(defaultModel,
-		270.0f,
+		accumulated,
 		glm::vec3(1.0f, 0.0f, 0.0f));
 
 	GLint uniModel = glGetUniformLocation(basicProgram->GetHandle(), "model");
@@ -108,6 +112,7 @@ static void resize_callback(GLFWwindow* window, int width, int height){
 	windowHeight = height;
 	aspectRatio = static_cast<float>(windowWidth) / static_cast<float>(windowHeight);
 }
+
 
 
 int main(int argc, char* argv[]){
@@ -218,8 +223,8 @@ int main(int argc, char* argv[]){
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
 
 	basicProgram = new GLProgram();
-	basicProgram->LoadVertexShader("C:/Users/Scales/Desktop/DragonEngine/Dragon/Shaders/basicvertex.glsl");
-	basicProgram->LoadFragmentShader("C:/Users/Scales/Desktop/DragonEngine/Dragon/Shaders/basicpixel.glsl");
+	basicProgram->LoadVertexShader("basic_v.glsl");
+	basicProgram->LoadFragmentShader("basic_p.glsl");
 	basicProgram->Link();
 	basicProgram->Use();
 
@@ -279,13 +284,15 @@ int main(int argc, char* argv[]){
 			accumulator -= dt;
 		}
 
+
+
 		const double alpha = accumulator / dt;
 
 		//State state = (currentState * alpha) + (previousState * (1.0 - alpha));
 
 		camera->Update();
 
-		Draw(/*state*/dt);
+		Draw(/*State + */dt);
 	}
 
 	glDeleteBuffers(1, &vbo);
