@@ -2,11 +2,14 @@
 #define __GLPROGRAM_H
 
 #include <GL/glew.h>
+#include <string>
 
 class GLProgram {
 public:
 	GLProgram();
 	~GLProgram();
+
+	static std::string basePath;
 
 	void LoadVertexShader(const char* name);
 	void LoadFragmentShader(const char* name);
@@ -15,7 +18,7 @@ public:
 	GLuint GetHandle();
 private:
 
-	static const char* basePath;
+	
 
 	void LogShaderInfo(GLuint shaderHandle);
 

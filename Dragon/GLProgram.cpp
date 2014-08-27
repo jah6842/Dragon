@@ -2,7 +2,7 @@
 #include "Utilities.h"
 #include <string>
 
-const char* GLProgram::basePath = "C:/Users/Scales/Desktop/DragonEngine/Dragon/Shaders/";
+std::string GLProgram::basePath;
 
 GLProgram::GLProgram() : vShaderHandle(0), fShaderHandle(0) {
 

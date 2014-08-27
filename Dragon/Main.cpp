@@ -22,7 +22,13 @@
 #include "Texture2D.h"
 #include "GLProgram.h"
 
+#ifdef _WIN32
+#include <PathCch.h> 
+#endif // _WIN32
+
 const std::string resourceDir = "..\\..\\Resources";
+
+std::string basePath;
 
 Texture2D* girlTex;
 Texture2D* dargTex;
@@ -113,13 +119,23 @@ static void resize_callback(GLFWwindow* window, int width, int height){
 	aspectRatio = static_cast<float>(windowWidth) / static_cast<float>(windowHeight);
 }
 
-
-
 int main(int argc, char* argv[]){
 
 	for (size_t i = 0; i < argc; ++i){
 		std::cout << argv[i] << '\n';
 	}
+
+	// Get the path of the base path so we can load resources
+	basePath = argv[0];
+	basePath = basePath.substr(0, basePath.find_last_of("\\/"));
+	basePath = basePath.substr(0, basePath.find_last_of("\\/"));
+	basePath = basePath.substr(0, basePath.find_last_of("\\/"));
+
+	std::cout << basePath.c_str();
+
+	std::string shaderPath = basePath.c_str();
+	shaderPath += "\\Dragon\\Shaders\\";
+	GLProgram::basePath = shaderPath;
 
 	if (!glfwInit())
 		return -1;
@@ -199,11 +215,13 @@ int main(int argc, char* argv[]){
 	};
 
 	girlTex = new Texture2D();
-	girlTex->LoadTexture("C:\\Users\\Scales\\Desktop\\DragonEngine\\Resources\\Images\\girl.bmp");
+	std::string texPath1 = basePath; texPath1 += "\\Resources\\Images\\girl.bmp";
+	girlTex->LoadTexture(texPath1.c_str());
 	girlTex->BindInSlot(GL_TEXTURE0);
 
 	dargTex = new Texture2D();
-	dargTex->LoadTexture("C:\\Users\\Scales\\Desktop\\DragonEngine\\Resources\\Images\\darg.bmp");
+	std::string texPath2 = basePath; texPath2 += "\\Resources\\Images\\darg.bmp";
+	dargTex->LoadTexture(texPath2.c_str());
 	dargTex->BindInSlot(GL_TEXTURE1);
 	
 	// BUFFERS
@@ -283,8 +301,6 @@ int main(int argc, char* argv[]){
 			t += dt;
 			accumulator -= dt;
 		}
-
-
 
 		const double alpha = accumulator / dt;
 
