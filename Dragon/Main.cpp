@@ -50,8 +50,8 @@ void Draw(float dt){
 
 	// Draw
 	basicProgram->Use();
-	//girlTex->BindInSlot(GL_TEXTURE0);
-	dargTex->BindInSlot(GL_TEXTURE0);
+	girlTex->BindInSlot(GL_TEXTURE0);
+	//dargTex->BindInSlot(GL_TEXTURE0);
 
 	accumulated += dt;
 
@@ -241,8 +241,8 @@ int main(int argc, char* argv[]){
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(elements), elements, GL_STATIC_DRAW);
 
 	basicProgram = new GLProgram();
-	basicProgram->LoadVertexShader("basic_v.glsl");
-	basicProgram->LoadFragmentShader("basic_p.glsl");
+	basicProgram->LoadVertexShader("textured_v.glsl");
+	basicProgram->LoadFragmentShader("textured_p.glsl");
 	basicProgram->Link();
 	basicProgram->Use();
 
@@ -270,45 +270,43 @@ int main(int argc, char* argv[]){
 	camera = new Camera(windowWidth, windowHeight);
 
 	// Main event loop
-	bool quit = false;
-
+	// Based on http://gafferongames.com/game-physics/fix-your-timestep/
 	double t = 0.0;
 	const double dt = 0.01;
 
 	double currentTime = dgnGetHighResTimestamp();
 	double accumulator = 0.0;
 
-	//State previous;
-	//State current;
+	int frameCount = 0;
 
 	while (!glfwWindowShouldClose(window))
 	{
 		glfwPollEvents();
+
+		frameCount++;
 
 		double newTime = dgnGetHighResTimestamp();
 		double frameTime = newTime - currentTime;
 		if (frameTime > 0.25)
 			frameTime = 0.25;
 		currentTime = newTime;
-		glfwSetWindowTitle(window, std::to_string(currentTime).c_str());
+
+		std::string newTitle = std::to_string(currentTime) + ", " + std::to_string(frameCount);
+		glfwSetWindowTitle(window, newTitle.c_str());
 
 		accumulator += frameTime;
 
 		while (accumulator >= dt)
 		{
-			//previousState = currentState;
-			//integrate(currentState, t, dt);
 			t += dt;
 			accumulator -= dt;
 		}
 
 		const double alpha = accumulator / dt;
 
-		//State state = (currentState * alpha) + (previousState * (1.0 - alpha));
-
 		camera->Update();
 
-		Draw(/*State + */dt);
+		Draw(dt);
 	}
 
 	glDeleteBuffers(1, &vbo);
