@@ -163,8 +163,6 @@
   <ItemGroup>
     <None Include="Shaders\basic_p.glsl" />
     <None Include="Shaders\basic_v.glsl" />
-    <None Include="Shaders\julia_p.glsl" />
-    <None Include="Shaders\julia_v.glsl" />
     <None Include="Shaders\textured_p.glsl" />
     <None Include="Shaders\textured_v.glsl" />
   </ItemGroup>

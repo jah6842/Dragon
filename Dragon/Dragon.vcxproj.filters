@@ -65,7 +65,5 @@
     <None Include="Shaders\textured_v.glsl" />
     <None Include="Shaders\basic_v.glsl" />
     <None Include="Shaders\basic_p.glsl" />
-    <None Include="Shaders\julia_p.glsl" />
-    <None Include="Shaders\julia_v.glsl" />
   </ItemGroup>
 </Project>
